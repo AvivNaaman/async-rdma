@@ -375,7 +375,7 @@ fn set_extent_hooks(arena_ind: u32) -> io::Result<()> {
     let key = format!("arena.{}.extent_hooks\0", arena_ind);
     // SAFETY: ?
     // TODO: check safety
-    let mut hooks_ptr: *mut extent_hooks_t = unsafe { &raw mut RDMA_EXTENT_HOOKS };
+    let mut hooks_ptr: *mut extent_hooks_t = &raw mut RDMA_EXTENT_HOOKS;
     let hooks_ptr_ptr: *mut *mut extent_hooks_t = &mut hooks_ptr;
     let hooks_len: size_t = size_of_val(&hooks_ptr_ptr);
     // SAFETY: ?
