@@ -14,7 +14,7 @@ use rdma_sys::ibv_access_flags;
 use std::{
     alloc::{alloc, alloc_zeroed, Layout},
     collections::{BTreeMap, HashMap},
-    io, mem,
+    io,
     ops::Bound::Included,
     ptr,
     sync::Arc,
@@ -326,7 +326,7 @@ fn get_default_hooks_impl(arena_ind: u32) -> extent_hooks_t {
     let mut hooks: *mut extent_hooks_t = ptr::null_mut();
     let hooks_ptr: *mut *mut extent_hooks_t = &mut hooks;
     let key = format!("arena.{}.extent_hooks\0", arena_ind);
-    let mut hooks_len = mem::size_of_val(&hooks);
+    let mut hooks_len = size_of_val(&hooks);
     // SAFETY: ?
     // TODO: check safety
     let errno = unsafe {
@@ -375,9 +375,9 @@ fn set_extent_hooks(arena_ind: u32) -> io::Result<()> {
     let key = format!("arena.{}.extent_hooks\0", arena_ind);
     // SAFETY: ?
     // TODO: check safety
-    let mut hooks_ptr: *mut extent_hooks_t = unsafe { &mut RDMA_EXTENT_HOOKS };
+    let mut hooks_ptr: *mut extent_hooks_t = unsafe { &raw mut RDMA_EXTENT_HOOKS };
     let hooks_ptr_ptr: *mut *mut extent_hooks_t = &mut hooks_ptr;
-    let hooks_len: size_t = mem::size_of_val(&hooks_ptr_ptr);
+    let hooks_len: size_t = size_of_val(&hooks_ptr_ptr);
     // SAFETY: ?
     // TODO: check safety
     let errno = unsafe {
@@ -402,7 +402,7 @@ fn create_arena() -> io::Result<u32> {
     let key = "arenas.create\0";
     let mut aid = 0_u32;
     let aid_ptr: *mut u32 = &mut aid;
-    let mut aid_len: size_t = mem::size_of_val(&aid);
+    let mut aid_len: size_t = size_of_val(&aid);
     // SAFETY: ?
     // TODO: check safety
     let errno = unsafe {
