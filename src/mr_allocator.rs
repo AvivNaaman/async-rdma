@@ -112,7 +112,7 @@ pub(crate) struct Item {
     addr: usize,
     /// length of an extent(memory region)
     len: usize,
-    /// Reference of RawMemoryRegion
+    /// Reference of `RawMemoryRegion`
     raw_mr: Arc<RawMemoryRegion>,
     /// arena index of this extent
     arena_ind: u32,
@@ -262,11 +262,10 @@ impl MrAllocator {
                         // didn't use this access before, so create an arena to mange this kind of MR
                         let ind = init_je_statics(Arc::<ProtectionDomain>::clone(pd), access)?;
                         if ACCESS_PD_ARENA_MAP.lock().insert(access_pd_key, ind).is_some(){
-                            return Err(io::Error::new(
-                                io::ErrorKind::Other,
-                                format!("this is a bug: insert ACCESS_ARENA_MAP failed, access:{:?} has been recorded", access),
+                            return Err(io::Error::other(
+                                format!("this is a bug: insert ACCESS_ARENA_MAP failed, access:{access:?} has been recorded"),
                             ))
-                        };
+                        }
                         Ok(ind)
                     }, |ind|{Ok(ind)})?
                 };
@@ -324,8 +323,8 @@ unsafe fn alloc_from_je(arena_ind: u32, layout: &Layout, flag: i32) -> Option<*m
 fn get_default_hooks_impl(arena_ind: u32) -> extent_hooks_t {
     // read default alloc impl
     let mut hooks: *mut extent_hooks_t = ptr::null_mut();
-    let hooks_ptr: *mut *mut extent_hooks_t = &mut hooks;
-    let key = format!("arena.{}.extent_hooks\0", arena_ind);
+    let hooks_ptr: *mut *mut extent_hooks_t = &raw mut hooks;
+    let key = format!("arena.{arena_ind}.extent_hooks\0");
     let mut hooks_len = size_of_val(&hooks);
     // SAFETY: ?
     // TODO: check safety
@@ -333,7 +332,7 @@ fn get_default_hooks_impl(arena_ind: u32) -> extent_hooks_t {
         tikv_jemalloc_sys::mallctl(
             key.as_ptr().cast(),
             hooks_ptr.cast(),
-            &mut hooks_len,
+            &raw mut hooks_len,
             ptr::null_mut(),
             0,
         )
@@ -372,11 +371,11 @@ unsafe fn alloc_raw_mem(layout: &Layout, flag: i32) -> Option<*mut u8> {
 
 /// Set custom extent hooks
 fn set_extent_hooks(arena_ind: u32) -> io::Result<()> {
-    let key = format!("arena.{}.extent_hooks\0", arena_ind);
+    let key = format!("arena.{arena_ind}.extent_hooks\0");
     // SAFETY: ?
     // TODO: check safety
     let mut hooks_ptr: *mut extent_hooks_t = &raw mut RDMA_EXTENT_HOOKS;
-    let hooks_ptr_ptr: *mut *mut extent_hooks_t = &mut hooks_ptr;
+    let hooks_ptr_ptr: *mut *mut extent_hooks_t = &raw mut hooks_ptr;
     let hooks_len: size_t = size_of_val(&hooks_ptr_ptr);
     // SAFETY: ?
     // TODO: check safety
@@ -401,7 +400,7 @@ fn set_extent_hooks(arena_ind: u32) -> io::Result<()> {
 fn create_arena() -> io::Result<u32> {
     let key = "arenas.create\0";
     let mut aid = 0_u32;
-    let aid_ptr: *mut u32 = &mut aid;
+    let aid_ptr: *mut u32 = &raw mut aid;
     let mut aid_len: size_t = size_of_val(&aid);
     // SAFETY: ?
     // TODO: check safety
@@ -409,7 +408,7 @@ fn create_arena() -> io::Result<u32> {
         tikv_jemalloc_sys::mallctl(
             key.as_ptr().cast(),
             aid_ptr.cast(),
-            &mut aid_len,
+            &raw mut aid_len,
             ptr::null_mut(),
             0,
         )
@@ -426,8 +425,7 @@ fn create_arena() -> io::Result<u32> {
 fn init_je_statics(pd: Arc<ProtectionDomain>, access: ibv_access_flags) -> io::Result<u32> {
     let ind = create_arena()?;
     if ARENA_PD_MAP.lock().insert(ind, (pd, access)).is_some() {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
+        return Err(io::Error::other(
             "insert ARENA_PD_MAP failed",
         ));
     }
@@ -467,7 +465,7 @@ unsafe extern "C" fn extent_alloc_hook(
     commit: *mut i32,
     arena_ind: u32,
 ) -> *mut c_void {
-    let origin_alloc = (*ORIGIN_HOOKS)
+    let origin_alloc = ORIGIN_HOOKS
         .alloc
         .expect("can not get default alloc hook");
     let addr = origin_alloc(
@@ -485,7 +483,7 @@ unsafe extern "C" fn extent_alloc_hook(
     register_extent_mr(addr, size, arena_ind).map_or_else(
         || {
             error!("register_extent_mr failed. If this is the first registration, it may be caused by invalid parameters, otherwise it is OOM");
-            let origin_dalloc_hook = (*ORIGIN_HOOKS)
+            let origin_dalloc_hook = ORIGIN_HOOKS
             .dalloc
             .expect("can not get default dalloc hook");
         if origin_dalloc_hook(extent_hooks, addr, size, *commit, arena_ind) == 1_i32 {
@@ -513,7 +511,7 @@ unsafe extern "C" fn extent_dalloc_hook(
 ) -> i32 {
     debug!("dalloc addr {}, size {}", addr as usize, size);
     remove_item(addr);
-    let origin_dalloc = (*ORIGIN_HOOKS)
+    let origin_dalloc = ORIGIN_HOOKS
         .dalloc
         .expect("can not get default dalloc hook");
     origin_dalloc(extent_hooks, addr, size, committed, arena_ind)
@@ -535,7 +533,7 @@ unsafe extern "C" fn extent_merge_hook(
         "merge addr_a {}, size_a {}; addr_b {}, size_b {}",
         addr_a as usize, size_a, addr_b as usize, size_b
     );
-    let origin_merge = (*ORIGIN_HOOKS)
+    let origin_merge = ORIGIN_HOOKS
         .merge
         .expect("can not get default merge hook");
     let err = origin_merge(
@@ -642,7 +640,7 @@ pub(crate) fn register_extent_mr(addr: *mut c_void, size: usize, arena_ind: u32)
             error!("can not get pd from ARENA_PD_MAP");
             None
         },
-        |&(ref pd, ref access)| {
+        |(pd, access)| {
             debug!(
                 "reg_mr addr {}, size {}, arena_ind {}, access {:?}",
                 addr as usize, size, arena_ind, access

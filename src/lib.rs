@@ -420,8 +420,7 @@ impl RdmaBuilder {
                 .await?;
                 Ok(rdma)
             }
-            ConnectionType::RCCM | ConnectionType::RCIBV => Err(io::Error::new(
-                io::ErrorKind::Other,
+            ConnectionType::RCCM | ConnectionType::RCIBV => Err(io::Error::other(
                 "ConnectionType should be XXSocket",
             )),
         }
@@ -447,8 +446,7 @@ impl RdmaBuilder {
                 .await?;
                 Ok(rdma)
             }
-            ConnectionType::RCCM | ConnectionType::RCSocket => Err(io::Error::new(
-                io::ErrorKind::Other,
+            ConnectionType::RCCM | ConnectionType::RCSocket => Err(io::Error::other(
                 "ConnectionType should be XXIBV",
             )),
         }
@@ -620,8 +618,7 @@ impl RdmaBuilder {
                     .set_tcp_listener(Some(Arc::new(Mutex::new(tcp_listener))));
                 Ok(rdma)
             }
-            ConnectionType::RCCM | ConnectionType::RCIBV => Err(io::Error::new(
-                io::ErrorKind::Other,
+            ConnectionType::RCCM | ConnectionType::RCIBV => Err(io::Error::other(
                 "ConnectionType should be XXSocket",
             )),
         }
@@ -1081,7 +1078,7 @@ async fn tcp_connect_helper<A: ToSocketAddrs>(
     let mut endpoint = bincode::serialize(ep).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("failed to serailize the endpoint, {:?}", e),
+            format!("failed to serailize the endpoint, {e:?}"),
         )
     })?;
     stream.write_all(&endpoint).await?;
@@ -1090,7 +1087,7 @@ async fn tcp_connect_helper<A: ToSocketAddrs>(
     bincode::deserialize(&endpoint).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("failed to deserailize the endpoint, {:?}", e),
+            format!("failed to deserailize the endpoint, {e:?}"),
         )
     })
 }
@@ -1103,24 +1100,21 @@ async fn tcp_listen(
     let (mut stream, _) = tcp_listener.accept().await?;
 
     let endpoint_size = bincode::serialized_size(ep).map_err(|e| {
-        io::Error::new(
-            io::ErrorKind::Other,
-            format!("Endpoint serialization failed, {:?}", e),
+        io::Error::other(
+            format!("Endpoint serialization failed, {e:?}"),
         )
     })?;
     let mut remote = vec![0_u8; endpoint_size.cast()];
     // the byte number is not important, as read_exact will fill the buffer
     let _ = stream.read_exact(remote.as_mut()).await?;
     let remote: QueuePairEndpoint = bincode::deserialize(&remote).map_err(|e| {
-        io::Error::new(
-            io::ErrorKind::Other,
-            format!("failed to deserialize remote endpoint, {:?}", e),
+        io::Error::other(
+            format!("failed to deserialize remote endpoint, {e:?}"),
         )
     })?;
     let local = bincode::serialize(ep).map_err(|e| {
-        io::Error::new(
-            io::ErrorKind::Other,
-            format!("failed to deserialize remote endpoint, {:?}", e),
+        io::Error::other(
+            format!("failed to deserialize remote endpoint, {e:?}"),
         )
     })?;
     stream.write_all(&local).await?;
@@ -1398,8 +1392,7 @@ impl Rdma {
                 .await?;
                 Ok(())
             }
-            ConnectionType::RCCM | ConnectionType::RCSocket => Err(io::Error::new(
-                io::ErrorKind::Other,
+            ConnectionType::RCCM | ConnectionType::RCSocket => Err(io::Error::other(
                 "ConnectionType should be XXIBV",
             )),
         }
@@ -1512,7 +1505,7 @@ impl Rdma {
                     .tcp_listener
                     .as_ref()
                     .map_or_else(
-                        || Err(io::Error::new(io::ErrorKind::Other, "tcp_listener is None")),
+                        || Err(io::Error::other("tcp_listener is None")),
                         |tcp_listener| {
                             Ok(async {
                                 let tcp_listener = tcp_listener.lock().await;
@@ -1532,8 +1525,7 @@ impl Rdma {
                 .await?;
                 Ok(rdma)
             }
-            ConnectionType::RCCM | ConnectionType::RCIBV => Err(io::Error::new(
-                io::ErrorKind::Other,
+            ConnectionType::RCCM | ConnectionType::RCIBV => Err(io::Error::other(
                 "ConnectionType should be XXSocket",
             )),
         }
@@ -1597,8 +1589,7 @@ impl Rdma {
                 .await?;
                 Ok(rdma)
             }
-            ConnectionType::RCCM | ConnectionType::RCIBV => Err(io::Error::new(
-                io::ErrorKind::Other,
+            ConnectionType::RCCM | ConnectionType::RCIBV => Err(io::Error::other(
                 "ConnectionType should be XXSocket",
             )),
         }
@@ -1667,7 +1658,7 @@ impl Rdma {
     pub async fn send(&self, lm: &LocalMr) -> io::Result<()> {
         self.agent
             .as_ref()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Agent is not ready"))?
+            .ok_or_else(|| io::Error::other("Agent is not ready"))?
             .send_data(lm, None)
             .await
     }
@@ -1944,7 +1935,7 @@ impl Rdma {
     pub async fn send_with_imm(&self, lm: &LocalMr, imm: u32) -> io::Result<()> {
         self.agent
             .as_ref()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Agent is not ready"))?
+            .ok_or_else(|| io::Error::other("Agent is not ready"))?
             .send_data(lm, Some(imm))
             .await
     }
@@ -2361,7 +2352,7 @@ impl Rdma {
     pub async fn receive_with_imm(&self) -> io::Result<(LocalMr, Option<u32>)> {
         self.agent
             .as_ref()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Agent is not ready"))?
+            .ok_or_else(|| io::Error::other("Agent is not ready"))?
             .receive_data()
             .await
     }
@@ -2431,7 +2422,7 @@ impl Rdma {
     pub async fn receive_write_imm(&self) -> io::Result<u32> {
         self.agent
             .as_ref()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Agent is not ready"))?
+            .ok_or_else(|| io::Error::other("Agent is not ready"))?
             .receive_imm()
             .await
     }
@@ -3146,8 +3137,7 @@ impl Rdma {
         if let Some(ref agent) = self.agent {
             agent.request_remote_mr_with_timeout(layout, timeout).await
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 "Agent is not ready, please wait a while",
             ))
         }
@@ -3282,8 +3272,7 @@ impl Rdma {
         if let Some(ref agent) = self.agent {
             agent.send_local_mr_with_timeout(mr, timeout).await
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 "Agent is not ready, please wait a while",
             ))
         }
@@ -3349,8 +3338,7 @@ impl Rdma {
         if let Some(ref agent) = self.agent {
             agent.send_remote_mr(mr).await
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 "Agent is not ready, please wait a while",
             ))
         }
@@ -3432,8 +3420,7 @@ impl Rdma {
         if let Some(ref agent) = self.agent {
             agent.receive_local_mr().await
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 "Agent is not ready, please wait a while",
             ))
         }
@@ -3495,8 +3482,7 @@ impl Rdma {
         if let Some(ref agent) = self.agent {
             agent.receive_remote_mr().await
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 "Agent is not ready, please wait a while",
             ))
         }
@@ -3823,12 +3809,10 @@ impl Rdma {
         self.trigger_tx
             .as_ref()
             .ok_or_else(|| match *self.qp.cq_event_listener().pt_type() {
-                PollingTriggerType::Automatic => io::Error::new(
-                    io::ErrorKind::Other,
+                PollingTriggerType::Automatic => io::Error::other(
                     "this method can only used with PollingTriggerType::Manual",
                 ),
-                PollingTriggerType::Manual => io::Error::new(
-                    io::ErrorKind::Other,
+                PollingTriggerType::Manual => io::Error::other(
                     "this is a bug, trigger_tx is not initialized",
                 ),
             })
@@ -4050,7 +4034,7 @@ impl Rdma {
         Ok(*self
             .agent
             .as_ref()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Agent is not ready"))?
+            .ok_or_else(|| io::Error::other("Agent is not ready"))?
             .ibv_event_listener()
             .last_event_type()
             .lock())
@@ -4157,24 +4141,21 @@ impl RdmaListener {
             "should set connection type to RCSocket"
         );
         let endpoint_size = bincode::serialized_size(&rdma.endpoint()).map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("Endpoint serialization failed, {:?}", e),
+            io::Error::other(
+                format!("Endpoint serialization failed, {e:?}"),
             )
         })?;
         let mut remote = vec![0_u8; endpoint_size.cast()];
         // the byte number is not important, as read_exact will fill the buffer
         let _ = stream.read_exact(remote.as_mut()).await?;
         let remote: QueuePairEndpoint = bincode::deserialize(&remote).map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("failed to deserialize remote endpoint, {:?}", e),
+            io::Error::other(
+                format!("failed to deserialize remote endpoint, {e:?}"),
             )
         })?;
         let local = bincode::serialize(&rdma.endpoint()).map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("failed to deserialize remote endpoint, {:?}", e),
+            io::Error::other(
+                format!("failed to deserialize remote endpoint, {e:?}"),
             )
         })?;
         stream.write_all(&local).await?;

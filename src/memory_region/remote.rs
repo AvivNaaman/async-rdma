@@ -93,10 +93,10 @@ impl RemoteMr {
 
     /// Get a remote mr slice
     #[inline]
-    pub fn get(&self, i: Range<usize>) -> io::Result<RemoteMrSlice> {
+    pub fn get(&self, i: Range<usize>) -> io::Result<RemoteMrSlice<'_>> {
         // SAFETY: `self` is checked to be valid and in bounds above.
         if i.start >= i.end || i.end > self.length() {
-            Err(io::Error::new(io::ErrorKind::Other, "wrong range of rmr"))
+            Err(io::Error::other("wrong range of rmr"))
         } else {
             let slice_token = MrToken {
                 addr: self.addr().wrapping_add(i.start),
@@ -111,10 +111,10 @@ impl RemoteMr {
 
     /// Get a mutable remote mr slice
     #[inline]
-    pub fn get_mut(&mut self, i: Range<usize>) -> io::Result<RemoteMrSliceMut> {
+    pub fn get_mut(&mut self, i: Range<usize>) -> io::Result<RemoteMrSliceMut<'_>> {
         // SAFETY: `self` is checked to be valid and in bounds above.
         if i.start >= i.end || i.end > self.length() {
-            Err(io::Error::new(io::ErrorKind::Other, "wrong range of rmr"))
+            Err(io::Error::other("wrong range of rmr"))
         } else {
             let slice_token = MrToken {
                 addr: self.addr().wrapping_add(i.start),

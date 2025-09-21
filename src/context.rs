@@ -92,7 +92,7 @@ impl Context {
         // SAFETY: POD FFI type
         let mut inner_port_attr = unsafe { std::mem::zeroed() };
         if unsafe {
-            rdma_sys::___ibv_query_port(inner_ctx.as_ptr(), port_num, &mut inner_port_attr)
+            rdma_sys::___ibv_query_port(inner_ctx.as_ptr(), port_num, &raw mut inner_port_attr)
         } != 0_i32
         {
             return Err(log_ret_last_os_err_with_note("ibv_query_port failed"));
@@ -154,8 +154,7 @@ impl Context {
         // SAFETY: ffi
         let ret = unsafe { fcntl(fd, F_SETFL, flags | O_NONBLOCK) };
         if ret < 0_i32 {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 "Error, failed to change file descriptor of async event queue",
             ))
         } else {
@@ -174,8 +173,7 @@ pub(crate) fn check_dev_cap<T: PartialOrd + std::fmt::Display>(
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!(
-                "The value of {} is: {}, which exceeds the hardware capability: {}",
-                attr_name, attr_val, dev_cap
+                "The value of {attr_name} is: {attr_val}, which exceeds the hardware capability: {dev_cap}"
             ),
         ))
     } else {

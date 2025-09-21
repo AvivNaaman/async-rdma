@@ -101,20 +101,20 @@ pub(crate) static DEFAULT_MAX_RD_ATOMIC: u8 = 1;
 #[getset(set, get = "pub")]
 pub(crate) struct QueuePairCap {
     /// The maximum number of outstanding Work Requests that can be posted to the Send Queue
-    /// in that Queue Pair. Value can be [1..dev_cap.max_qp_wr].
+    /// in that Queue Pair. Value can be [`1..dev_cap.max_qp_wr`].
     #[builder(default = "MAX_SEND_WR")]
     max_send_wr: u32,
     /// The maximum number of outstanding Work Requests that can be posted to the Receive Queue
-    /// in that Queue Pair. Value can be [1..dev_cap.max_qp_wr]. This value is ignored if the
+    /// in that Queue Pair. Value can be [`1..dev_cap.max_qp_wr`]. This value is ignored if the
     /// Queue Pair is associated with an SRQ.
     #[builder(default = "MAX_RECV_WR")]
     max_recv_wr: u32,
     /// The maximum number of scatter/gather elements in any Work Request that can be posted to
-    /// the Send Queue in that Queue Pair. Value can be [1..dev_cap.max_sge].
+    /// the Send Queue in that Queue Pair. Value can be [`1..dev_cap.max_sge`].
     #[builder(default = "MAX_SEND_SGE")]
     max_send_sge: u32,
     /// The maximum number of scatter/gather elements in any Work Request that can be posted to
-    /// the Receive Queue in that Queue Pair. Value can be [1..dev_cap.max_sge]. This value is
+    /// the Receive Queue in that Queue Pair. Value can be [`1..dev_cap.max_sge`]. This value is
     /// ignored if the Queue Pair is associated with an SRQ.
     #[builder(default = "MAX_RECV_SGE")]
     max_recv_sge: u32,
@@ -158,7 +158,7 @@ pub(crate) struct QueuePairInitAttr {
     send_cq: *mut ibv_cq,
     /// A Completion Queue to be associated with the Receive Queue
     recv_cq: *mut ibv_cq,
-    /// (optional) A Shared Receive Queue, that was returned from ibv_create_srq(), that this
+    /// (optional) A Shared Receive Queue, that was returned from `ibv_create_srq()`, that this
     /// Queue Pair will be associated with. Otherwise, NULL. Not support for now.
     #[builder(default = "None")]
     srq: Option<*mut ibv_srq>,
@@ -171,9 +171,9 @@ pub(crate) struct QueuePairInitAttr {
     qp_cap: QueuePairCap,
     // TODO: add high level enum wrapper
     /// Requested Transport Service Type of this QP:
-    /// IBV_QPT_RC  Reliable Connection
-    /// IBV_QPT_UC  Unreliable Connection
-    /// IBV_QPT_UD  Unreliable Datagram
+    /// `IBV_QPT_RC`  Reliable Connection
+    /// `IBV_QPT_UC`  Unreliable Connection
+    /// `IBV_QPT_UD`  Unreliable Datagram
     /// Only support RC for now.
     #[builder(default = "rdma_sys::ibv_qp_type::IBV_QPT_RC")]
     qp_type: u32,
@@ -187,7 +187,7 @@ pub(crate) struct QueuePairInitAttr {
     /// Access flag
     #[builder(default = "*DEFAULT_ACCESS")]
     access: ibv_access_flags,
-    /// Primary P_Key index. The value of the entry in the P_Key table that outgoing
+    /// Primary `P_Key` index. The value of the entry in the `P_Key` table that outgoing
     /// packets from this QP will be sent with and incoming packets to this QP will
     /// be verified within the Primary path.
     #[builder(default = "DEFAULT_PKEY_INDEX")]
@@ -267,7 +267,7 @@ pub(crate) struct AddressHandler {
     #[builder(default = "DEFAULT_SERVICE_LEVEL")]
     service_level: u8,
     /// The used Source Path Bits. This is useful when LMC is used in the port, i.e. each port covers a
-    /// range of LIDs. The packets are being sent with the port's base LID, bitwised ORed with the value
+    /// range of LIDs. The packets are being sent with the port's base LID, bitwised `ORed` with the value
     /// of the source path bits. The value 0 indicates the port's base LID is used
     #[builder(default = "DEFAULT_SRC_PATH_BITS")]
     src_path_bits: u8,
@@ -366,15 +366,15 @@ impl_from_buidler_error_for_another!(GlobalRouteHeaderBuilderError, AddressHandl
 /// automatically fragment the messages to packet of this size.
 #[derive(Debug, Clone, Copy)]
 pub enum MTU {
-    /// IBV_MTU_256 - 256 bytes
+    /// `IBV_MTU_256` - 256 bytes
     MTU256,
-    /// IBV_MTU_512 - 512 bytes
+    /// `IBV_MTU_512` - 512 bytes
     MTU512,
-    /// IBV_MTU_1024 - 1024 bytes
+    /// `IBV_MTU_1024` - 1024 bytes
     MTU1024,
-    /// IBV_MTU_2048 - 2048 bytes
+    /// `IBV_MTU_2048` - 2048 bytes
     MTU2048,
-    /// IBV_MTU_4096 - 4096 bytes
+    /// `IBV_MTU_4096` - 4096 bytes
     MTU4096,
 }
 
@@ -494,21 +494,21 @@ pub(crate) struct SQAttr {
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueuePairState {
-    /// IBV_QPS_RESET - Reset state
+    /// `IBV_QPS_RESET` - Reset state
     Reset,
-    /// IBV_QPS_INIT - Initialized state
+    /// `IBV_QPS_INIT` - Initialized state
     Init,
-    /// IBV_QPS_RTR - Ready To Receive state
+    /// `IBV_QPS_RTR` - Ready To Receive state
     ReadyToRecv,
-    /// IBV_QPS_RTS - Ready To Send state
+    /// `IBV_QPS_RTS` - Ready To Send state
     ReadyToSend,
-    /// IBV_QPS_SQD - Send Queue Drain state
+    /// `IBV_QPS_SQD` - Send Queue Drain state
     SQDrain,
-    /// IBV_QPS_SQE - Send Queue Error state
+    /// `IBV_QPS_SQE` - Send Queue Error state
     SQErr,
-    /// IBV_QPS_ERR - Error state
+    /// `IBV_QPS_ERR` - Error state
     Err,
-    /// IBV_QPS_UNKNOWN - Unknown state
+    /// `IBV_QPS_UNKNOWN` - Unknown state
     Unknown,
 }
 
@@ -546,7 +546,7 @@ pub(crate) struct QueuePair {
     inner_qp: NonNull<ibv_qp>,
     /// Assume that this is the current QP state. This is useful if it is known
     /// to the application that the QP state is different from the assumed state
-    /// by the low-level driver. It can be one of the enumerated values as qp_state.
+    /// by the low-level driver. It can be one of the enumerated values as `qp_state`.
     cur_state: Arc<RwLock<QueuePairState>>,
 }
 
@@ -571,9 +571,9 @@ impl QueuePair {
         let errno = unsafe {
             ibv_query_qp(
                 self.as_ptr(),
-                &mut qp_attr,
+                &raw mut qp_attr,
                 mask.0.cast(),
-                &mut qp_init_attr,
+                &raw mut qp_init_attr,
             )
         };
         if errno != 0_i32 {
@@ -624,7 +624,7 @@ impl QueuePair {
             | ibv_qp_attr_mask::IBV_QP_PORT
             | ibv_qp_attr_mask::IBV_QP_ACCESS_FLAGS;
         // SAFETY: ffi, and qp will not modify by other threads
-        let errno = unsafe { ibv_modify_qp(self.as_ptr(), &mut attr, flags.0.cast()) };
+        let errno = unsafe { ibv_modify_qp(self.as_ptr(), &raw mut attr, flags.0.cast()) };
         if errno != 0_i32 {
             return Err(log_ret_last_os_err());
         }
@@ -657,7 +657,7 @@ impl QueuePair {
             | ibv_qp_attr_mask::IBV_QP_MAX_DEST_RD_ATOMIC
             | ibv_qp_attr_mask::IBV_QP_MIN_RNR_TIMER;
         // SAFETY: ffi, and qp will not modify by other threads
-        let errno = unsafe { ibv_modify_qp(self.as_ptr(), &mut qp_attr, flags.0.cast()) };
+        let errno = unsafe { ibv_modify_qp(self.as_ptr(), &raw mut qp_attr, flags.0.cast()) };
         if errno != 0_i32 {
             return Err(log_ret_last_os_err());
         }
@@ -698,7 +698,7 @@ impl QueuePair {
             | ibv_qp_attr_mask::IBV_QP_SQ_PSN
             | ibv_qp_attr_mask::IBV_QP_MAX_QP_RD_ATOMIC;
         // SAFETY: ffi, and qp will not modify by other threads
-        let errno = unsafe { ibv_modify_qp(self.as_ptr(), &mut attr, flags.0.cast()) };
+        let errno = unsafe { ibv_modify_qp(self.as_ptr(), &raw mut attr, flags.0.cast()) };
         if errno != 0_i32 {
             return Err(log_ret_last_os_err());
         }
@@ -734,7 +734,7 @@ impl QueuePair {
         }
         // SAFETY: ffi
         // TODO: check safety
-        let errno = unsafe { ibv_post_send(self.as_ptr(), send_attr.as_mut(), &mut bad_wr) };
+        let errno = unsafe { ibv_post_send(self.as_ptr(), send_attr.as_mut(), &raw mut bad_wr) };
         if errno != 0_i32 {
             return Err(log_ret_last_os_err());
         }
@@ -769,7 +769,7 @@ impl QueuePair {
         }
         // SAFETY: ffi
         // TODO: check safety
-        let errno = unsafe { ibv_post_recv(self.as_ptr(), recv_attr.as_mut(), &mut bad_wr) };
+        let errno = unsafe { ibv_post_recv(self.as_ptr(), recv_attr.as_mut(), &raw mut bad_wr) };
         if errno != 0_i32 {
             return Err(log_ret_last_os_err());
         }
@@ -805,7 +805,7 @@ impl QueuePair {
         }
         // SAFETY: ffi
         // TODO: check safety
-        let errno = unsafe { ibv_post_send(self.as_ptr(), send_attr.as_mut(), &mut bad_wr) };
+        let errno = unsafe { ibv_post_send(self.as_ptr(), send_attr.as_mut(), &raw mut bad_wr) };
         if errno != 0_i32 {
             return Err(log_ret_last_os_err());
         }
@@ -847,7 +847,7 @@ impl QueuePair {
         }
         // SAFETY: ffi
         // TODO: check safety
-        let errno = unsafe { ibv_post_send(self.as_ptr(), send_attr.as_mut(), &mut bad_wr) };
+        let errno = unsafe { ibv_post_send(self.as_ptr(), send_attr.as_mut(), &raw mut bad_wr) };
         if errno != 0_i32 {
             return Err(log_ret_last_os_err());
         }
@@ -880,7 +880,7 @@ impl QueuePair {
         self.cq_event_listener.cq.req_notify(false)?;
 
         // SAFETY: ffi
-        let errno = unsafe { ibv_post_send(self.as_ptr(), cas_wr.as_mut(), &mut bad_wr) };
+        let errno = unsafe { ibv_post_send(self.as_ptr(), cas_wr.as_mut(), &raw mut bad_wr) };
         if errno != 0_i32 {
             return Err(log_ret_last_os_err());
         }
@@ -1007,7 +1007,7 @@ impl QueuePair {
         resp_rx
             .recv()
             .await
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "agent is dropped"))?
+            .ok_or_else(|| io::Error::other("agent is dropped"))?
             .result()
             .map(|sz| debug!("post size: {sz}, mr len: {len}"))
             .map_err(Into::into)
@@ -1032,7 +1032,7 @@ impl QueuePair {
         resp_rx
             .recv()
             .await
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "agent is dropped"))?
+            .ok_or_else(|| io::Error::other("agent is dropped"))?
             .result()
             .map(|sz| debug!("post size: {sz}, mr len: {len}"))
             .map_err(Into::into)
@@ -1059,7 +1059,7 @@ impl QueuePair {
         resp_rx
             .recv()
             .await
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "agent is dropped"))?
+            .ok_or_else(|| io::Error::other("agent is dropped"))?
             .result()
             .map(|sz| assert_eq!(sz, 8))
             .map_err(Into::into)
@@ -1317,7 +1317,7 @@ impl<Op: QueuePairOp + Unpin> Future for QueuePairOps<Op> {
                     }
                 } else {
                     match recv.take().ok_or_else(|| {
-                        io::Error::new(io::ErrorKind::Other, "Bug in queue pair op poll")
+                        io::Error::other("Bug in queue pair op poll")
                     }) {
                         Ok(recv) => s.state = QueuePairOpsState::Submitted(recv),
                         Err(e) => return Poll::Ready(Err(e)),
@@ -1333,8 +1333,7 @@ impl<Op: QueuePairOp + Unpin> Future for QueuePairOps<Op> {
             QueuePairOpsState::Submitted(ref mut recv) => {
                 Poll::Ready(match ready!(recv.poll_recv(cx)) {
                     Some(wc) => s.op.result(wc).map_err(Into::into),
-                    None => Err(io::Error::new(
-                        io::ErrorKind::Other,
+                    None => Err(io::Error::other(
                         "Wc receiver unexpect closed",
                     )),
                 })

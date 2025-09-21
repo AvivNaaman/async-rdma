@@ -10,7 +10,7 @@ use tokio::io::unix::AsyncFd;
 pub(crate) struct EventChannel {
     /// The ibv device context
     _ctx: Arc<Context>,
-    /// The inner ibv_comp_channel pointer
+    /// The inner `ibv_comp_channel` pointer
     inner_ec: NonNull<ibv_comp_channel>,
 }
 

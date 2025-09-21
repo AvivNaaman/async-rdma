@@ -55,7 +55,7 @@ impl DeviceList {
         // SAFETY: ffi
         unsafe {
             let mut num_devices: c_int = 0;
-            let arr = ibv_get_device_list(&mut num_devices);
+            let arr = ibv_get_device_list(&raw mut num_devices);
             if arr.is_null() {
                 return Err(last_error());
             }
@@ -175,7 +175,7 @@ impl Guid {
 impl fmt::Debug for Guid {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Guid({:x})", self)
+        write!(f, "Guid({self:x})")
     }
 }
 

@@ -175,16 +175,14 @@ impl Agent {
             ResponseKind::SendMR(smr) => match smr.kind {
                 SendMRResponseKind::Success => Ok(()),
                 SendMRResponseKind::Timeout => {
-                    Err(io::Error::new(io::ErrorKind::Other, "this rmr is timeout"))
+                    Err(io::Error::other("this rmr is timeout"))
                 }
-                SendMRResponseKind::RemoteAgentErr => Err(io::Error::new(
-                    io::ErrorKind::Other,
+                SendMRResponseKind::RemoteAgentErr => Err(io::Error::other(
                     "remote agent is in an error state",
                 )),
             },
             ResponseKind::AllocMR(_) | ResponseKind::ReleaseMR(_) | ResponseKind::SendData(_) => {
-                Err(io::Error::new(
-                    io::ErrorKind::Other,
+                Err(io::Error::other(
                     "received wrong response, expect SendMR response",
                 ))
             }
@@ -198,7 +196,7 @@ impl Agent {
             .await
             .recv()
             .await
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "mr channel closed"))
+            .ok_or_else(|| io::Error::other("mr channel closed"))
     }
 
     /// Receive a local memory region metadata from the other side
@@ -208,7 +206,7 @@ impl Agent {
             .await
             .recv()
             .await
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "mr channel closed"))
+            .ok_or_else(|| io::Error::other("mr channel closed"))
     }
 
     /// Send the content in the `lm` to the other side
@@ -227,8 +225,7 @@ impl Agent {
                 .await?;
             if let ResponseKind::SendData(send_data_resp) = response {
                 if send_data_resp.status > 0 {
-                    return Err(io::Error::new(
-                        io::ErrorKind::Other,
+                    return Err(io::Error::other(
                         format!(
                             "send data failed, response status is {}",
                             send_data_resp.status
@@ -236,11 +233,9 @@ impl Agent {
                     ));
                 }
             } else {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
+                return Err(io::Error::other(
                     format!(
-                        "send data failed, due to unexpected response type {:?}",
-                        response
+                        "send data failed, due to unexpected response type {response:?}"
                     ),
                 ));
             }
@@ -257,9 +252,9 @@ impl Agent {
             .await
             .recv()
             .await
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "data channel closed"))?;
+            .ok_or_else(|| io::Error::other("data channel closed"))?;
         let lmr = lmr.take(0..len).ok_or_else(|| {
-            io::Error::new(io::ErrorKind::Other, "this is a bug, received wrong len")
+            io::Error::other("this is a bug, received wrong len")
         })?;
         Ok((lmr, imm))
     }
@@ -271,7 +266,7 @@ impl Agent {
             .await
             .recv()
             .await
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "imm data channel closed"))
+            .ok_or_else(|| io::Error::other("imm data channel closed"))
     }
 
     /// Get the max length of message for send/recv
@@ -322,8 +317,7 @@ impl AgentThread {
             Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 format!(
-                    "max message length is {:?}, it should be greater than 0",
-                    max_sr_data_len
+                    "max message length is {max_sr_data_len:?}, it should be greater than 0"
                 ),
             ))
         } else {
@@ -373,8 +367,7 @@ impl AgentThread {
             let message =
                 // SAFETY: the mr is readable here without cancel safety issue
                 bincode::deserialize(unsafe {header_buf.as_slice_unchecked()}.get(..).ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::Other,
+                    io::Error::other(
                         format!(
                             "{:?} is out of range, the length is {:?}",
                             0..sz,
@@ -383,9 +376,8 @@ impl AgentThread {
                     )
                 })?)
                 .map_err(|e| {
-                    io::Error::new(
-                        io::ErrorKind::Other,
-                        format!("failed to deserialize {:?}", e),
+                    io::Error::other(
+                        format!("failed to deserialize {e:?}"),
                     )
                 })?;
             debug!("message: {:?}", message);
@@ -414,16 +406,15 @@ impl AgentThread {
                     // detach the task
                     let _task = tokio::spawn(Arc::<Self>::clone(&self).handle_response(response));
                 }
-            };
+            }
         }
     }
 
     /// hadnle `write_with_imm` requests.
     async fn handle_write_imm(self: Arc<Self>, imm: u32) -> io::Result<()> {
         self.imm_send.send(imm).await.map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("Data receiver has stopped, {:?}", e),
+            io::Error::other(
+                format!("Data receiver has stopped, {e:?}"),
             )
         })
     }
@@ -436,7 +427,7 @@ impl AgentThread {
                 // TODO: error handling
                 let mr = self.inner.allocator.alloc_zeroed(
                     &Layout::from_size_align(param.size, param.align)
-                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?,
+                        .map_err(|e| io::Error::other(e))?,
                     self.inner.rmr_manager.max_rmr_access,
                     &self.inner.rmr_manager.pd,
                 )?;
@@ -458,7 +449,7 @@ impl AgentThread {
                     .await
                     .map_or_else(
                         |err| unreachable!("{:?}", err),
-                        |_| debug!("record mr requested by remote end {:?}", token),
+                        |()| debug!("record mr requested by remote end {:?}", token),
                     );
                 let response = AllocMRResponse { token };
                 ResponseKind::AllocMR(response)
@@ -490,7 +481,7 @@ impl AgentThread {
                                 error!("Agent remote_mr channel error {:?}", err);
                                 SendMRResponseKind::RemoteAgentErr
                             },
-                            |_| SendMRResponseKind::Success,
+                            |()| SendMRResponseKind::Success,
                         ),
                     SendMRKind::Remote(token) => match self.inner.rmr_manager.release_mr(&token) {
                         Ok(mr) => self.local_mr_send.send(mr).await.map_or_else(
@@ -498,7 +489,7 @@ impl AgentThread {
                                 error!("Agent local_mr channel error {:?}", err);
                                 SendMRResponseKind::RemoteAgentErr
                             },
-                            |_| SendMRResponseKind::Success,
+                            |()| SendMRResponseKind::Success,
                         ),
                         Err(err) => {
                             debug!("{:?}", err);
@@ -510,8 +501,7 @@ impl AgentThread {
             }
             RequestKind::SendData(_) => {
                 // TODO: error handling
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
+                return Err(io::Error::other(
                     "Should not reach here, SendData is handled separately",
                 ));
             }
@@ -534,8 +524,7 @@ impl AgentThread {
             .lock()
             .remove(&response.request_id)
             .ok_or_else(|| {
-                io::Error::new(
-                    io::ErrorKind::Other,
+                io::Error::other(
                     format!(
                         "request id {:?} is missing in waiting list",
                         &response.request_id
@@ -543,9 +532,8 @@ impl AgentThread {
                 )
             })?;
         match sender.try_send(Ok(response.kind)) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(io::Error::new(
-                io::ErrorKind::Other,
+            Ok(()) => Ok(()),
+            Err(_) => Err(io::Error::other(
                 "The waiting task has dropped",
             )),
         }
@@ -563,9 +551,8 @@ impl AgentThread {
                 .send((buf, param.len, imm))
                 .await
                 .map_err(|e| {
-                    io::Error::new(
-                        io::ErrorKind::Other,
-                        format!("Data receiver has stopped, {:?}", e),
+                    io::Error::other(
+                        format!("Data receiver has stopped, {e:?}"),
                     )
                 })?;
             let response = Response {
@@ -574,8 +561,7 @@ impl AgentThread {
             };
             self.inner.send_response(response).await?;
         } else {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
+            return Err(io::Error::other(
                 "This function only handles send request",
             ));
         }
@@ -668,7 +654,7 @@ impl AgentInner {
         let message = Message::Request(req);
         // FIXME: serialize udpate
         bincode::serialize_into(cursor, &message)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(|e| io::Error::other(e))?;
         // SAFETY: The input range is always valid
         let header_buf = &unsafe { header_buf.get_unchecked(0..header_buf.length()) };
         let mut lms: Vec<&LocalMrSlice> = vec![header_buf];
@@ -676,7 +662,7 @@ impl AgentInner {
         self.qp.send_sge(&lms, imm).await?;
         match tokio::time::timeout(RESPONSE_TIMEOUT, rx.recv()).await {
             Ok(resp) => {
-                resp.ok_or_else(|| io::Error::new(io::ErrorKind::Other, "agent is dropped"))?
+                resp.ok_or_else(|| io::Error::other("agent is dropped"))?
             }
             Err(_) => Err(io::Error::new(
                 io::ErrorKind::TimedOut,
@@ -695,18 +681,17 @@ impl AgentInner {
             .alloc_zeroed_default(unsafe {
                 &Layout::from_size_align_unchecked(*RESPONSE_HEADER_MAX_LEN, 1)
             })
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(|e| io::Error::other(e))?;
         // SAFETY: the mr is readable here without cancel safety issue
         let cursor = Cursor::new(unsafe { header.as_mut_slice_unchecked() });
         let message = Message::Response(response);
         let msz = bincode::serialized_size(&message)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
+            .map_err(|e| io::Error::other(e))?
             .cast();
         bincode::serialize_into(cursor, &message)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(|e| io::Error::other(e))?;
         let buf = header.get_mut(0..msz).ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::Other,
+            io::Error::other(
                 "this is a bug, get a wrong serialized size",
             )
         })?;

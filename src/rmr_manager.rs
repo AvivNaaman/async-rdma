@@ -71,7 +71,7 @@ impl RemoteMrManager {
                 |lmr| {
                     Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
-                        format!("the MR {:?} used multiple times", lmr),
+                        format!("the MR {lmr:?} used multiple times"),
                     ))
                 },
             )
@@ -83,16 +83,15 @@ impl RemoteMrManager {
         remove_mr_from_map(&self.mr_map, token).map_or_else(Err, |(lmr, release_tx)| {
             // cancel timer task
             release_tx.send(()).map_or_else(
-                |_| {
+                |()| {
                     Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
                         format!(
-                            "timer task already droped and the related mr was droped {:?}",
-                            token
+                            "timer task already droped and the related mr was droped {token:?}"
                         ),
                     ))
                 },
-                |_| Ok(lmr),
+                |()| Ok(lmr),
             )
         })
     }
@@ -126,7 +125,7 @@ async fn mr_timer(
             |err| {
                 error!("rmr_manager timer receiver droped {:?}", err);
             },
-            |_| debug!("mr_timer waked up rmr_manager successfully"),
+            |()| debug!("mr_timer waked up rmr_manager successfully"),
         );
     }
 }
@@ -137,7 +136,7 @@ fn remove_mr_from_map(map: &RmrMap, token: &MrToken) -> io::Result<(LocalMr, one
         || {
             Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                format!("can not find MR {:?}", token),
+                format!("can not find MR {token:?}"),
             ))
         },
         |res| {

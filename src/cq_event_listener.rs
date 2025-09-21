@@ -134,7 +134,7 @@ impl CQEventListener {
                                 error! {"polling trigger error: {:?}", e};
                                 Err(e)
                             },
-                            |_| {
+                            |()| {
                                 debug!("trigger a poll");
                                 Ok(())
                             },
@@ -144,7 +144,7 @@ impl CQEventListener {
 
                 loop {
                     match cq.poll_cq_multiple(&mut wc_buf) {
-                        Ok(_) => {
+                        Ok(()) => {
                             #[cfg(feature = "cancel_safety_test")]
                             // only used in cancel_safety test for waiting to be canceled
                             tokio::time::sleep(DELAY_FOR_CANCEL_SAFETY_TEST).await;
@@ -200,8 +200,7 @@ impl CQEventListener {
                         guards.push(ArcRwLockGuard::RwLockWriteGuard(write_guard));
                     }
                     None => {
-                        return Err(io::Error::new(
-                            io::ErrorKind::Other,
+                        return Err(io::Error::other(
                             format!("{:?} is locked by other ops", &inner),
                         ))
                     }
@@ -212,8 +211,7 @@ impl CQEventListener {
                         guards.push(ArcRwLockGuard::RwLockReadGuard(read_guard));
                     }
                     None => {
-                        return Err(io::Error::new(
-                            io::ErrorKind::Other,
+                        return Err(io::Error::other(
                             format!("{:?} is locked by other ops", &inner),
                         ))
                     }

@@ -96,7 +96,7 @@ impl CompletionQueue {
         // SAFETY: ffi
         // TODO: check safety
         let errno = unsafe {
-            ibv_req_notify_cq(self.inner_cq.as_ptr(), if solicited_only { 1 } else { 0 })
+            ibv_req_notify_cq(self.inner_cq.as_ptr(), i32::from(solicited_only))
         };
         if errno != 0_i32 {
             let err = log_ret_last_os_err();
@@ -274,7 +274,7 @@ pub(crate) enum WCError {
 impl From<WCError> for io::Error {
     #[inline]
     fn from(e: WCError) -> Self {
-        Self::new(io::ErrorKind::Other, e)
+        Self::other(e)
     }
 }
 

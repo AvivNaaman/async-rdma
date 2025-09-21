@@ -88,7 +88,7 @@ impl IbvEventListener {
                     }
                     // SAFETY: ffi
                     unsafe {
-                        ibv_ack_async_event(&mut event.inner);
+                        ibv_ack_async_event(&raw mut event.inner);
                     }
                     let _ = last_event_type.lock().replace(event_type);
                 }

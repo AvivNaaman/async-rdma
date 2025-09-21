@@ -36,7 +36,7 @@ pub unsafe trait LocalMrReadAccess: MrAccess {
     /// If this mr is being used in RDMA ops, the thread may be blocked
     #[allow(clippy::as_conversions)]
     #[inline]
-    fn as_ptr(&self) -> MappedRwLockReadGuard<*const u8> {
+    fn as_ptr(&self) -> MappedRwLockReadGuard<'_, *const u8> {
         MappedRwLockReadGuard::new(self.get_inner().read(), self.addr() as *const u8)
     }
 
@@ -45,10 +45,10 @@ pub unsafe trait LocalMrReadAccess: MrAccess {
     /// Return `None` if this mr is being used in RDMA ops without blocking thread
     #[allow(clippy::as_conversions)]
     #[inline]
-    fn try_as_ptr(&self) -> Option<MappedRwLockReadGuard<*const u8>> {
+    fn try_as_ptr(&self) -> Option<MappedRwLockReadGuard<'_, *const u8>> {
         self.get_inner().try_read().map_or_else(
             || None,
-            |guard| return Some(MappedRwLockReadGuard::new(guard, self.addr() as *const u8)),
+            |guard| Some(MappedRwLockReadGuard::new(guard, self.addr() as *const u8)),
         )
     }
 
@@ -68,7 +68,7 @@ pub unsafe trait LocalMrReadAccess: MrAccess {
     /// If this mr is being used in RDMA ops, the thread may be blocked
     #[inline]
     #[allow(clippy::as_conversions)]
-    fn as_slice(&self) -> MappedRwLockReadGuard<&[u8]> {
+    fn as_slice(&self) -> MappedRwLockReadGuard<'_, &[u8]> {
         // SAFETY: memory of this mr should have been initialized
         MappedRwLockReadGuard::map(self.as_ptr(), |ptr| unsafe {
             slice::from_raw_parts(ptr, self.length())
@@ -80,14 +80,14 @@ pub unsafe trait LocalMrReadAccess: MrAccess {
     /// Return `None` if this mr is being used in RDMA ops without blocking thread
     #[allow(clippy::as_conversions)]
     #[inline]
-    fn try_as_slice(&self) -> Option<MappedRwLockReadGuard<&[u8]>> {
+    fn try_as_slice(&self) -> Option<MappedRwLockReadGuard<'_, &[u8]>> {
         self.try_as_ptr().map_or_else(
             || None,
             |guard| {
                 // SAFETY: memory of this mr should have been initialized
-                return Some(MappedRwLockReadGuard::map(guard, |ptr| unsafe {
+                Some(MappedRwLockReadGuard::map(guard, |ptr| unsafe {
                     slice::from_raw_parts(ptr, self.length())
-                }));
+                }))
             },
         )
     }
@@ -98,7 +98,7 @@ pub unsafe trait LocalMrReadAccess: MrAccess {
     /// If this mr is being used in RDMA ops, the thread may be blocked
     #[inline]
     #[allow(clippy::as_conversions)]
-    fn as_slice_cursor(&self) -> MappedRwLockReadGuard<Cursor<&[u8]>> {
+    fn as_slice_cursor(&self) -> MappedRwLockReadGuard<'_, Cursor<&[u8]>> {
         // SAFETY: memory of this mr should have been initialized
         MappedRwLockReadGuard::map(self.as_ptr(), |ptr| unsafe {
             Cursor::new(slice::from_raw_parts(ptr, self.length()))
@@ -111,14 +111,14 @@ pub unsafe trait LocalMrReadAccess: MrAccess {
     /// Return `None` if this mr is being used in RDMA ops without blocking thread
     #[allow(clippy::as_conversions)]
     #[inline]
-    fn try_as_slice_cursor(&self) -> Option<MappedRwLockReadGuard<Cursor<&[u8]>>> {
+    fn try_as_slice_cursor(&self) -> Option<MappedRwLockReadGuard<'_, Cursor<&[u8]>>> {
         self.try_as_ptr().map_or_else(
             || None,
             |guard| {
                 // SAFETY: memory of this mr should have been initialized
-                return Some(MappedRwLockReadGuard::map(guard, |ptr| unsafe {
+                Some(MappedRwLockReadGuard::map(guard, |ptr| unsafe {
                     Cursor::new(slice::from_raw_parts(ptr, self.length()))
-                }));
+                }))
             },
         )
     }
@@ -228,7 +228,7 @@ pub unsafe trait LocalMrReadAccess: MrAccess {
 
     /// Get read lock of `LocalMrInenr`
     #[inline]
-    fn read_inner(&self) -> RwLockReadGuard<LocalMrInner> {
+    fn read_inner(&self) -> RwLockReadGuard<'_, LocalMrInner> {
         self.get_inner().read()
     }
 }
@@ -249,7 +249,7 @@ pub unsafe trait LocalMrWriteAccess: MrAccess + LocalMrReadAccess {
     /// If this mr is being used in RDMA ops, the thread may be blocked
     #[inline]
     #[allow(clippy::as_conversions)]
-    fn as_mut_ptr(&mut self) -> MappedRwLockWriteGuard<*mut u8> {
+    fn as_mut_ptr(&mut self) -> MappedRwLockWriteGuard<'_, *mut u8> {
         MappedRwLockWriteGuard::new(self.get_inner().write(), self.addr() as *mut u8)
     }
 
@@ -258,10 +258,10 @@ pub unsafe trait LocalMrWriteAccess: MrAccess + LocalMrReadAccess {
     /// Return `None` if this mr is being used in RDMA ops without blocking thread
     #[allow(clippy::as_conversions)]
     #[inline]
-    fn try_as_mut_ptr(&self) -> Option<MappedRwLockWriteGuard<*mut u8>> {
+    fn try_as_mut_ptr(&self) -> Option<MappedRwLockWriteGuard<'_, *mut u8>> {
         self.get_inner().try_write().map_or_else(
             || None,
-            |guard| return Some(MappedRwLockWriteGuard::new(guard, self.addr() as *mut u8)),
+            |guard| Some(MappedRwLockWriteGuard::new(guard, self.addr() as *mut u8)),
         )
     }
 
@@ -274,7 +274,7 @@ pub unsafe trait LocalMrWriteAccess: MrAccess + LocalMrReadAccess {
     #[allow(clippy::as_conversions)]
     fn as_mut_ptr_unchecked(&mut self) -> *mut u8 {
         // const pointer to mut pointer is safe
-        self.as_ptr_unchecked() as *mut u8
+        self.as_ptr_unchecked().cast_mut()
     }
 
     /// Get the memory region as mutable slice until it is writeable
@@ -282,7 +282,7 @@ pub unsafe trait LocalMrWriteAccess: MrAccess + LocalMrReadAccess {
     /// If this mr is being used in RDMA ops, the thread may be blocked
     #[inline]
     #[allow(clippy::as_conversions)]
-    fn as_mut_slice(&mut self) -> MappedRwLockWriteGuard<&mut [u8]> {
+    fn as_mut_slice(&mut self) -> MappedRwLockWriteGuard<'_, &mut [u8]> {
         let len = self.length();
         // SAFETY: memory of this mr should have been initialized
         MappedRwLockWriteGuard::map(self.as_mut_ptr(), |ptr| unsafe {
@@ -295,14 +295,14 @@ pub unsafe trait LocalMrWriteAccess: MrAccess + LocalMrReadAccess {
     /// Return `None` if this mr is being used in RDMA ops without blocking thread
     #[allow(clippy::as_conversions)]
     #[inline]
-    fn try_as_mut_slice(&mut self) -> Option<MappedRwLockWriteGuard<&mut [u8]>> {
+    fn try_as_mut_slice(&mut self) -> Option<MappedRwLockWriteGuard<'_, &mut [u8]>> {
         self.try_as_mut_ptr().map_or_else(
             || None,
             |guard| {
                 // SAFETY: memory of this mr should have been initialized
-                return Some(MappedRwLockWriteGuard::map(guard, |ptr| unsafe {
+                Some(MappedRwLockWriteGuard::map(guard, |ptr| unsafe {
                     slice::from_raw_parts_mut(ptr, self.length())
-                }));
+                }))
             },
         )
     }
@@ -313,7 +313,7 @@ pub unsafe trait LocalMrWriteAccess: MrAccess + LocalMrReadAccess {
     /// If this mr is being used in RDMA ops, the thread may be blocked
     #[inline]
     #[allow(clippy::as_conversions)]
-    fn as_mut_slice_cursor(&mut self) -> MappedRwLockWriteGuard<Cursor<&mut [u8]>> {
+    fn as_mut_slice_cursor(&mut self) -> MappedRwLockWriteGuard<'_, Cursor<&mut [u8]>> {
         let len = self.length();
         // SAFETY: memory of this mr should have been initialized
         MappedRwLockWriteGuard::map(self.as_mut_ptr(), |ptr| unsafe {
@@ -327,14 +327,14 @@ pub unsafe trait LocalMrWriteAccess: MrAccess + LocalMrReadAccess {
     /// Return `None` if this mr is being used in RDMA ops without blocking thread
     #[inline]
     #[allow(clippy::as_conversions)]
-    fn try_as_mut_slice_cursor(&mut self) -> Option<MappedRwLockWriteGuard<Cursor<&mut [u8]>>> {
+    fn try_as_mut_slice_cursor(&mut self) -> Option<MappedRwLockWriteGuard<'_, Cursor<&mut [u8]>>> {
         self.try_as_mut_ptr().map_or_else(
             || None,
             |guard| {
                 // SAFETY: memory of this mr should have been initialized
-                return Some(MappedRwLockWriteGuard::map(guard, |ptr| unsafe {
+                Some(MappedRwLockWriteGuard::map(guard, |ptr| unsafe {
                     Cursor::new(slice::from_raw_parts_mut(ptr, self.length()))
-                }));
+                }))
             },
         )
     }
@@ -359,7 +359,7 @@ pub unsafe trait LocalMrWriteAccess: MrAccess + LocalMrReadAccess {
 
     /// Get write lock of `LocalMrInenr`
     #[inline]
-    fn write_inner(&self) -> RwLockWriteGuard<LocalMrInner> {
+    fn write_inner(&self) -> RwLockWriteGuard<'_, LocalMrInner> {
         self.get_inner().write()
     }
 }
@@ -429,7 +429,7 @@ impl LocalMr {
     /// Return `None` if the inputed range is wrong
     #[inline]
     #[must_use]
-    pub fn get(&self, i: Range<usize>) -> Option<LocalMrSlice> {
+    pub fn get(&self, i: Range<usize>) -> Option<LocalMrSlice<'_>> {
         // SAFETY: `self` is checked to be valid and in bounds above.
         if i.start >= i.end || i.end > self.len {
             None
@@ -454,7 +454,7 @@ impl LocalMr {
     /// * Indexes must be within bounds of the original `LocalMr`.
     #[inline]
     #[must_use]
-    pub unsafe fn get_unchecked(&self, i: Range<usize>) -> LocalMrSlice {
+    pub unsafe fn get_unchecked(&self, i: Range<usize>) -> LocalMrSlice<'_> {
         LocalMrSlice::new(
             self,
             Arc::<RwLocalMrInner>::clone(&self.inner),
@@ -467,7 +467,7 @@ impl LocalMr {
     ///
     /// Return `None` if the inputed range is wrong
     #[inline]
-    pub fn get_mut(&mut self, i: Range<usize>) -> Option<LocalMrSliceMut> {
+    pub fn get_mut(&mut self, i: Range<usize>) -> Option<LocalMrSliceMut<'_>> {
         // SAFETY: `self` is checked to be valid and in bounds above.
         if i.start >= i.end || i.end > self.length() {
             None
@@ -491,7 +491,7 @@ impl LocalMr {
     /// * The starting index must not exceed the ending index;
     /// * Indexes must be within bounds of the original `LocalMr`.
     #[inline]
-    pub unsafe fn get_unchecked_mut(&mut self, i: Range<usize>) -> LocalMrSliceMut {
+    pub unsafe fn get_unchecked_mut(&mut self, i: Range<usize>) -> LocalMrSliceMut<'_> {
         LocalMrSliceMut::new(
             self,
             Arc::<RwLocalMrInner>::clone(&self.inner),
